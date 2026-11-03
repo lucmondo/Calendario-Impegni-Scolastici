@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Calendario Impegni Scolastici</title>
+  <meta name="description" content="Memorizza gli impegni scolastici dell'anno e ricevi avvisi quando vuoi tu.">
+  <meta name="theme-color" content="#3446c8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151a33" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Impegni Scuola">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon.svg" alt="" width="32" height="32">
+      <div>
+        <h1>Calendario Impegni Scolastici</h1>
+        <p class="sub" id="yearLabel"></p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn ghost small" id="installBtn" hidden>Installa</button>
+      <label class="year-picker">
+        <span class="sr-only">Anno scolastico</span>
+        <select id="yearSelect" aria-label="Anno scolastico"></select>
+      </label>
+    </div>
+  </header>
+
+  <div class="banner" id="notifBanner" hidden>
+    <span>Attiva le notifiche per ricevere gli avvisi dei tuoi impegni.</span>
+    <button class="btn small" data-action="enable-notifications">Attiva</button>
+  </div>
+
+  <main id="main">
+    <!-- CALENDARIO -->
+    <section class="view active" id="view-calendar" aria-label="Calendario">
+      <div class="cal-layout">
+        <div class="card cal-card">
+          <div class="month-nav">
+            <button class="icon-btn" id="prevMonth" aria-label="Mese precedente">
+              <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <h2 id="monthTitle"></h2>
+            <button class="icon-btn" id="nextMonth" aria-label="Mese successivo">
+              <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+          <div class="weekdays">
+            <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+          </div>
+          <div class="grid" id="monthGrid"></div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="card day-card">
+          <div class="day-head">
+            <h3 id="dayTitle"></h3>
+            <button class="btn small" data-action="add-on-day">+ Aggiungi</button>
+          </div>
+          <div id="dayList" class="ev-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ELENCO -->
+    <section class="view" id="view-list" aria-label="Impegni">
+      <div class="chips" role="tablist" id="listFilter">
+        <button class="chip active" data-filter="mine">I miei impegni</button>
+        <button class="chip" data-filter="upcoming">Prossimi</button>
+        <button class="chip" data-filter="all">Tutto il calendario</button>
+      </div>
+      <div class="search">
+        <input type="search" id="searchInput" placeholder="Cerca impegno…" aria-label="Cerca impegno">
+      </div>
+      <div id="agenda"></div>
+    </section>
+
+    <!-- IMPORTA -->
+    <section class="view" id="view-import" aria-label="Importa calendario">
+      <div class="card">
+        <h2>Importa il calendario ufficiale</h2>
+        <p class="muted">Carica il PDF o una foto del calendario scolastico dell'anno <strong data-year-label></strong>.
+          L'app riconosce le date, poi spunti i tuoi impegni.</p>
+        <div class="dropzone" id="dropzone">
+          <svg viewBox="0 0 24 24" class="dz-icon"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+          <p>Trascina qui il file oppure</p>
+          <div class="row wrap center">
+            <label class="btn">
+              Scegli PDF o immagine
+              <input type="file" id="fileInput" accept="application/pdf,image/*,.txt" hidden>
+            </label>
+            <label class="btn secondary">
+              Scatta una foto
+              <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+            </label>
+          </div>
+          <p class="hint">PDF, JPG, PNG o TXT. I PDF scansionati vengono letti con il riconoscimento del testo (OCR).</p>
+        </div>
+        <div class="progress" id="scanProgress" hidden>
+          <div class="progress-bar"><span id="progressFill"></span></div>
+          <p id="progressText" class="muted"></p>
+        </div>
+      </div>
+
+      <div class="card" id="reviewCard" hidden>
+        <div class="review-head">
+          <div>
+            <h2>Spunta i tuoi impegni</h2>
+            <p class="muted" id="reviewSummary"></p>
+          </div>
+          <div class="row">
+            <button class="btn ghost small" data-action="check-all">Tutti</button>
+            <button class="btn ghost small" data-action="check-none">Nessuno</button>
+          </div>
+        </div>
+        <div id="candidateList" class="cand-list"></div>
+        <label class="switch-row">
+          <input type="checkbox" id="keepUnchecked" checked>
+          <span>Salva anche le date non spuntate come riferimento (senza avvisi)</span>
+        </label>
+        <div class="row end">
+          <button class="btn ghost" data-action="cancel-import">Annulla</button>
+          <button class="btn" data-action="save-import" id="saveImportBtn">Salva nel calendario</button>
+        </div>
+      </div>
+
+      <details class="card raw">
+        <summary>Testo riconosciuto / incolla il testo del calendario</summary>
+        <p class="muted">Puoi correggere gli errori di lettura o incollare il testo del calendario, poi premere “Analizza”.</p>
+        <textarea id="rawText" rows="10" placeholder="Es.: 14 settembre 2026 Inizio delle lezioni&#10;dal 23 dicembre 2026 al 6 gennaio 2027 Vacanze di Natale"></textarea>
+        <div class="row end">
+          <button class="btn secondary" data-action="analyze-text">Analizza</button>
+        </div>
+      </details>
+    </section>
+
+    <!-- AVVISI / IMPOSTAZIONI -->
+    <section class="view" id="view-settings" aria-label="Avvisi e impostazioni">
+      <div class="card">
+        <h2>Notifiche</h2>
+        <div class="status-row">
+          <span id="permStatus" class="pill"></span>
+          <button class="btn small" data-action="enable-notifications" id="permBtn">Attiva notifiche</button>
+          <button class="btn ghost small" data-action="test-alert">Prova avviso</button>
+        </div>
+        <p class="hint" id="permHint"></p>
+      </div>
+
+      <div class="card">
+        <h2>Come visualizzare l'avviso</h2>
+        <div class="seg" id="modeSeg" role="radiogroup" aria-label="Tipo di avviso">
+          <button data-mode="system" role="radio">Notifica</button>
+          <button data-mode="app" role="radio">Avviso nell'app</button>
+          <button data-mode="both" role="radio">Entrambi</button>
+        </div>
+        <label class="switch-row"><input type="checkbox" id="setSound"><span>Suono</span></label>
+        <label class="switch-row"><input type="checkbox" id="setVibrate"><span>Vibrazione</span></label>
+      </div>
+
+      <div class="card">
+        <h2>Quando avvisarmi</h2>
+        <p class="muted">Avvisi predefiniti per ogni impegno spuntato (puoi personalizzarli sul singolo impegno).</p>
+        <div class="chips wrap" id="offsetChips"></div>
+        <div class="custom-offset">
+          <span>Altro:</span>
+          <input type="number" min="1" max="999" value="3" id="customOffsetN" aria-label="Quantità">
+          <select id="customOffsetU" aria-label="Unità">
+            <option value="1">minuti</option>
+            <option value="60">ore</option>
+            <option value="1440" selected>giorni</option>
+            <option value="10080">settimane</option>
+          </select>
+          <span>prima</span>
+          <button class="btn small secondary" data-action="add-custom-offset">Aggiungi</button>
+        </div>
+        <label class="field inline">
+          <span>Orario di riferimento per gli impegni senza ora</span>
+          <input type="time" id="setDefaultTime">
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>Riepilogo del giorno</h2>
+        <label class="switch-row"><input type="checkbox" id="setSummary"><span>Ricevi ogni giorno il riepilogo degli impegni</span></label>
+        <label class="field inline"><span>Alle ore</span><input type="time" id="setSummaryTime"></label>
+      </div>
+
+      <div class="card">
+        <h2>Calendario del telefono</h2>
+        <p class="muted">Per avvisi garantiti anche con l'app chiusa, aggiungi i tuoi impegni (con gli avvisi scelti) al calendario del dispositivo.</p>
+        <div class="row wrap">
+          <button class="btn" data-action="export-ics">Aggiungi al calendario (.ics)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Dati</h2>
+        <div class="row wrap">
+          <button class="btn secondary small" data-action="export-backup">Esporta backup</button>
+          <label class="btn secondary small">Ripristina backup<input type="file" id="backupInput" accept="application/json" hidden></label>
+          <button class="btn danger small" data-action="clear-year">Svuota anno <span data-year-label></span></button>
+        </div>
+        <p class="hint">I dati restano solo su questo dispositivo.</p>
+      </div>
+    </section>
+  </main>
+
+  <button class="fab" data-action="add-event" aria-label="Nuovo impegno">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <nav class="tabbar" aria-label="Sezioni">
+    <button class="tab active" data-view="calendar">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span>Calendario</span>
+    </button>
+    <button class="tab" data-view="list">
+      <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>
+      <span>Impegni</span>
+    </button>
+    <button class="tab" data-view="import">
+      <svg viewBox="0 0 24 24"><path d="M4 7V5a1 1 0 011-1h2M17 4h2a1 1 0 011 1v2M20 17v2a1 1 0 01-1 1h-2M7 20H5a1 1 0 01-1-1v-2M7 12h10"/></svg>
+      <span>Importa</span>
+    </button>
+    <button class="tab" data-view="settings">
+      <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+      <span>Avvisi</span>
+    </button>
+  </nav>
+
+  <!-- Dialog impegno -->
+  <dialog id="eventDialog" class="sheet">
+    <form method="dialog" id="eventForm">
+      <header class="sheet-head">
+        <h2 id="eventDialogTitle">Nuovo impegno</h2>
+        <button type="button" class="icon-btn" data-action="close-dialog" aria-label="Chiudi">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="sheet-body">
+        <label class="field"><span>Titolo</span><input name="title" required maxlength="140" placeholder="Es. Consiglio di classe 3B"></label>
+        <div class="two">
+          <label class="field"><span>Giorno</span><input type="date" name="date" required></label>
+          <label class="field"><span>Fino al (facoltativo)</span><input type="date" name="endDate"></label>
+        </div>
+        <div class="two">
+          <label class="field"><span>Ora</span><input type="time" name="time"></label>
+          <label class="field"><span>Ora fine</span><input type="time" name="endTime"></label>
+        </div>
+        <label class="field"><span>Categoria</span><select name="category" id="categorySelect"></select></label>
+        <label class="field"><span>Note</span><textarea name="notes" rows="2" maxlength="500"></textarea></label>
+
+        <label class="switch-row strong"><input type="checkbox" name="mine"><span>È un mio impegno: ricevi gli avvisi</span></label>
+
+        <fieldset class="reminders" id="reminderBox">
+          <legend>Avvisi</legend>
+          <label class="radio-row"><input type="radio" name="remMode" value="default" checked><span>Usa le impostazioni predefinite <em id="defaultsPreview"></em></span></label>
+          <label class="radio-row"><input type="radio" name="remMode" value="custom"><span>Personalizza per questo impegno</span></label>
+          <div id="customReminders" hidden>
+            <div class="chips wrap" id="evOffsetChips"></div>
+            <div class="custom-offset">
+              <span>Altro:</span>
+              <input type="number" min="1" max="999" value="3" id="evCustomN" aria-label="Quantità">
+              <select id="evCustomU" aria-label="Unità">
+                <option value="1">minuti</option>
+                <option value="60">ore</option>
+                <option value="1440" selected>giorni</option>
+                <option value="10080">settimane</option>
+              </select>
+              <span>prima</span>
+              <button type="button" class="btn small secondary" data-action="add-ev-offset">Aggiungi</button>
+            </div>
+            <div class="seg" id="evModeSeg" role="radiogroup" aria-label="Tipo di avviso">
+              <button type="button" data-mode="system">Notifica</button>
+              <button type="button" data-mode="app">Nell'app</button>
+              <button type="button" data-mode="both">Entrambi</button>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+      <footer class="sheet-foot">
+        <button type="button" class="btn danger ghost" data-action="delete-event" id="deleteEventBtn">Elimina</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-action="close-dialog">Annulla</button>
+        <button type="submit" class="btn">Salva</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Avviso nell'app -->
+  <div class="alert-layer" id="alertLayer" hidden>
+    <div class="alert-card" role="alertdialog" aria-labelledby="alertTitle" aria-describedby="alertBody">
+      <div class="alert-icon"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+      <h2 id="alertTitle"></h2>
+      <p id="alertBody"></p>
+      <div class="row center">
+        <button class="btn ghost" data-action="alert-open">Apri</button>
+        <button class="btn" data-action="alert-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/ics.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

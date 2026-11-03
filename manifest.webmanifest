@@ -1,0 +1,24 @@
+{
+  "name": "Calendario Impegni Scolastici",
+  "short_name": "Impegni Scuola",
+  "description": "Memorizza gli impegni scolastici dell'anno, importa il calendario ufficiale e ricevi avvisi quando vuoi tu.",
+  "lang": "it",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f6fb",
+  "theme_color": "#3446c8",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "I miei impegni", "url": "./#view=list" },
+    { "name": "Importa calendario", "url": "./#view=import" }
+  ]
+}
